@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3진의 급식알리미 🍱</title>
+<style>
+  :root {
+    --g900:#0d4f2e; --g800:#145f38; --g700:#1a7a4a; --g600:#22a05f;
+    --g500:#2ecc80; --g400:#5dd8a0; --g300:#9de8c4; --g200:#c8f2e0;
+    --g100:#e8faf2; --g50:#f4fdf8;
+    --warn:#e65c00; --warnbg:#fff4ec; --warnbr:#ffb380;
+    --err:#c0392b;  --errbg:#fdf2f2; --errbr:#f5b7b7;
+    --text:#1a2e23; --muted:#5a7a68; --border:#c3ddd0;
+    --white:#fff; --shadow:0 2px 12px rgba(26,122,74,.10);
+    --radius:14px; --rsm:9px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;background:var(--g50);color:var(--text);min-height:100vh;}
+
+  /* HEADER */
+  .hdr{background:linear-gradient(135deg,var(--g900),var(--g700));color:#fff;position:sticky;top:0;z-index:100;box-shadow:0 3px 16px rgba(13,79,46,.35);}
+  .hdr-top{padding:14px 18px 10px;display:flex;justify-content:space-between;align-items:flex-start;}
+  .hdr-left h1{font-size:19px;font-weight:800;letter-spacing:-.5px;}
+  .hdr-left .sub{font-size:11px;opacity:.75;margin-top:3px;}
+  .hdr-right{text-align:right;font-size:11px;opacity:.8;}
+  .hdr-right .day{font-size:15px;font-weight:700;opacity:1;}
+
+  /* TABS */
+  .tabs{display:flex;background:rgba(0,0,0,.18);}
+  .tab{flex:1;padding:9px 2px 8px;text-align:center;font-size:11px;color:rgba(255,255,255,.65);cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;user-select:none;}
+  .tab.active{color:#fff;border-bottom-color:#fff;background:rgba(255,255,255,.12);}
+  .tab-ic{font-size:16px;display:block;margin-bottom:2px;}
+
+  /* LAYOUT */
+  .main{max-width:500px;margin:0 auto;padding:16px 12px 48px;}
+  .sec{display:none;} .sec.active{display:block;}
+
+  /* CARD */
+  .card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:14px;border:1px solid var(--g200);}
+  .card-head{background:var(--g100);padding:11px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--g200);}
+  .card-title{font-weight:700;color:var(--g700);font-size:14px;}
+  .card-sub{font-size:12px;background:var(--g700);color:#fff;padding:3px 9px;border-radius:20px;}
+
+  /* ALERT */
+  .alert{border-radius:var(--rsm);padding:11px 14px;margin-bottom:12px;display:flex;align-items:flex-start;gap:9px;font-size:13.5px;line-height:1.65;}
+  .alert.warn{background:var(--warnbg);border:1.5px solid var(--warnbr);color:#7a3000;}
+  .alert.info{background:var(--g100);border:1.5px solid var(--g300);color:var(--g900);}
+  .alert.ok{background:var(--g100);border:1.5px solid var(--g400);color:var(--g900);}
+  .alert.err{background:var(--errbg);border:1.5px solid var(--errbr);color:#7f0000;}
+  .alert-ic{font-size:19px;flex-shrink:0;margin-top:1px;}
+
+  /* LOADING */
+  .loading{text-align:center;padding:44px 20px;color:var(--muted);}
+  .spin{width:34px;height:34px;border:3px solid var(--g200);border-top-color:var(--g600);border-radius:50%;animation:sp .75s linear infinite;margin:0 auto 14px;}
+  @keyframes sp{to{transform:rotate(360deg);}}
+
+  /* MENU */
+  .menu-item{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--g50);}
+  .menu-item:last-child{border-bottom:none;}
+  .menu-item.danger{background:var(--errbg);}
+  .menu-name{font-size:14.5px;}
+  .menu-name.danger{color:var(--err);font-weight:700;}
+  .tags{display:flex;flex-wrap:wrap;gap:3px;justify-content:flex-end;max-width:175px;}
+  .tag{font-size:10.5px;padding:2px 6px;border-radius:10px;font-weight:700;}
+  .tag.d{background:var(--errbg);color:var(--err);border:1px solid var(--errbr);}
+  .tag.s{background:var(--g100);color:var(--g700);border:1px solid var(--g300);}
+
+  /* DATE NAV */
+  .date-nav{display:flex;align-items:center;justify-content:space-between;background:var(--white);border-radius:var(--rsm);padding:10px 13px;margin-bottom:12px;box-shadow:var(--shadow);border:1px solid var(--g200);}
+  .nav-btn{background:none;border:1.5px solid var(--border);border-radius:7px;padding:5px 12px;cursor:pointer;font-size:13px;color:var(--g800);font-family:inherit;transition:all .15s;}
+  .nav-btn:hover{background:var(--g100);border-color:var(--g600);color:var(--g700);}
+  .cur-date{font-size:15px;font-weight:700;}
+  .wd{font-size:12px;color:var(--muted);margin-left:4px;font-weight:400;}
+
+  /* WEEK STRIP */
+  .week-strip{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:12px;}
+  .wday{padding:6px 2px;text-align:center;border-radius:var(--rsm);cursor:pointer;font-size:11px;color:var(--muted);background:var(--white);border:1.5px solid var(--border);transition:all .15s;}
+  .wday:hover{border-color:var(--g500);background:var(--g100);}
+  .wday.active{background:var(--g700);color:#fff;border-color:var(--g700);font-weight:700;}
+  .wday.today{border-color:var(--g500);}
+  .wday .dn{font-size:10px;margin-bottom:1px;}
+  .wday .dd{font-size:13px;font-weight:700;}
+  .wday.has-meal .dd::after{content:'·';color:var(--g500);font-size:14px;margin-left:1px;}
+  .wday.active .dd::after{color:rgba(255,255,255,.7);}
+
+  /* MONTH NAV */
+  .month-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+  .month-label{font-size:15px;font-weight:700;color:var(--g800);}
+  .month-btn{background:none;border:1.5px solid var(--border);border-radius:7px;padding:4px 11px;cursor:pointer;font-size:13px;color:var(--g800);font-family:inherit;transition:all .15s;}
+  .month-btn:hover{background:var(--g100);border-color:var(--g600);}
+
+  /* ALLERGY */
+  .ag{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:14px;}
+  .abtn{display:flex;align-items:center;gap:8px;padding:10px 11px;background:var(--white);border:1.5px solid var(--border);border-radius:var(--rsm);cursor:pointer;font-size:13px;color:var(--text);transition:all .15s;font-family:inherit;}
+  .abtn:hover{border-color:var(--g500);background:var(--g100);}
+  .abtn.on{background:var(--errbg);border-color:var(--errbr);color:var(--err);}
+  .abtn .dot{width:18px;height:18px;border-radius:50%;border:2px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;}
+  .abtn.on .dot{background:var(--err);border-color:var(--err);color:#fff;}
+  .save-btn{width:100%;padding:14px;background:linear-gradient(135deg,var(--g800),var(--g600));color:#fff;border:none;border-radius:var(--rsm);font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .2s;}
+  .save-btn:hover{opacity:.88;}
+  .sec-lbl{font-size:12.5px;color:var(--muted);margin-bottom:9px;font-weight:700;}
+
+  /* NOTIF */
+  .notif-row{background:var(--white);border-radius:var(--rsm);border:1px solid var(--g200);padding:13px 15px;margin-bottom:9px;display:flex;justify-content:space-between;align-items:center;}
+  .nt{font-size:14px;font-weight:600;}
+  .nd{font-size:12px;color:var(--muted);margin-top:2px;}
+  .tog{width:44px;height:24px;background:#ccc;border-radius:12px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;}
+  .tog.on{background:var(--g600);}
+  .tog::after{content:'';position:absolute;width:20px;height:20px;background:#fff;border-radius:50%;top:2px;left:2px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);}
+  .tog.on::after{left:22px;}
+
+  /* NUTRIENT */
+  .nb{padding:13px 16px;}
+  .nrow{margin-bottom:11px;}
+  .nrow:last-child{margin-bottom:0;}
+  .nlbl{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px;}
+  .nname{color:var(--text);font-weight:600;}
+  .nval{color:var(--muted);}
+  .bar-t{height:8px;background:var(--g100);border-radius:4px;overflow:hidden;}
+  .bar-f{height:100%;border-radius:4px;transition:width .9s ease;}
+
+  /* ECO */
+  .eco{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:15px;margin-bottom:13px;border:1px solid var(--g200);}
+  .ebadge{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 9px;border-radius:20px;margin-bottom:8px;font-weight:700;}
+  .ebadge.g{background:var(--g100);color:var(--g700);border:1px solid var(--g300);}
+  .ebadge.o{background:var(--warnbg);color:var(--warn);border:1px solid var(--warnbr);}
+  .ebadge.t{background:#edf4ff;color:#1a5fa8;border:1px solid #a8ccf5;}
+  .etitle{font-size:15px;font-weight:700;margin-bottom:6px;}
+  .edesc{font-size:13px;color:var(--muted);line-height:1.75;}
+  .ehl{color:var(--g700);font-weight:700;}
+  .estat-row{display:flex;gap:9px;margin-top:12px;}
+  .estat{flex:1;background:var(--g50);border-radius:var(--rsm);padding:10px;text-align:center;border:1px solid var(--g200);}
+  .estat .en{font-size:17px;font-weight:800;color:var(--g700);}
+  .estat .el{font-size:11px;color:var(--muted);margin-top:2px;}
+
+  /* ── 탄소발자국 탭 ── */
+  .carbon-hero{background:linear-gradient(135deg,var(--g900),var(--g700));border-radius:var(--radius);padding:20px;margin-bottom:14px;color:#fff;text-align:center;box-shadow:var(--shadow);}
+  .carbon-hero .big{font-size:48px;font-weight:800;line-height:1;margin:10px 0 4px;}
+  .carbon-hero .unit{font-size:14px;opacity:.8;}
+  .carbon-hero .label{font-size:13px;opacity:.75;margin-top:4px;}
+  .carbon-hero .compare{font-size:12px;background:rgba(255,255,255,.15);border-radius:20px;padding:4px 12px;display:inline-block;margin-top:8px;}
+
+  .co2-bar-wrap{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:14px;border:1px solid var(--g200);}
+  .co2-bar-head{background:var(--g100);padding:11px 16px;font-weight:700;color:var(--g700);font-size:14px;border-bottom:1px solid var(--g200);}
+  .co2-item{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--g50);}
+  .co2-item:last-child{border-bottom:none;}
+  .co2-name{font-size:13.5px;width:90px;flex-shrink:0;color:var(--text);}
+  .co2-bar-outer{flex:1;height:14px;background:var(--g100);border-radius:7px;overflow:hidden;}
+  .co2-bar-inner{height:100%;border-radius:7px;transition:width 1s ease;}
+  .co2-val{font-size:12px;color:var(--muted);width:58px;text-align:right;flex-shrink:0;}
+
+  .tip-card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:15px;margin-bottom:14px;border:1px solid var(--g200);}
+  .tip-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 9px;border-radius:20px;margin-bottom:8px;font-weight:700;background:var(--g100);color:var(--g700);border:1px solid var(--g300);}
+  .tip-title{font-size:14px;font-weight:700;margin-bottom:6px;}
+  .tip-desc{font-size:13px;color:var(--muted);line-height:1.75;}
+
+  .accum-card{background:linear-gradient(135deg,#1b5e20,#2e7d32);border-radius:var(--radius);padding:16px;margin-bottom:14px;color:#fff;box-shadow:var(--shadow);}
+  .accum-card h3{font-size:14px;font-weight:700;margin-bottom:12px;opacity:.9;}
+  .accum-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+  .accum-item{background:rgba(255,255,255,.12);border-radius:var(--rsm);padding:10px;text-align:center;}
+  .accum-item .an{font-size:20px;font-weight:800;}
+  .accum-item .al{font-size:10.5px;opacity:.8;margin-top:2px;}
+
+  .no-meal-carbon{text-align:center;padding:36px 20px;color:var(--muted);}
+  .no-meal-carbon .emoji{font-size:40px;margin-bottom:10px;}
+
+  .fnote{text-align:center;font-size:11px;color:#aac;margin-top:8px;line-height:1.75;}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-top">
+    <div class="hdr-left">
+      <h1>🥗 3진의 급식알리미</h1>
+      <div class="sub">서울문영여자고등학교 · 3학년 진반</div>
+    </div>
+    <div class="hdr-right">
+      <div class="day" id="hDay"></div>
+      <div id="hDate"></div>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab active"  onclick="sw('meal')">    <span class="tab-ic">🍽️</span>오늘급식</div>
+    <div class="tab"         onclick="sw('carbon')">  <span class="tab-ic">🌿</span>탄소발자국</div>
+    <div class="tab"         onclick="sw('allergy')"> <span class="tab-ic">⚠️</span>알레르기</div>
+    <div class="tab"         onclick="sw('nutrient')"><span class="tab-ic">📊</span>영양소</div>
+    <div class="tab"         onclick="sw('eco')">     <span class="tab-ic">🌱</span>기후급식</div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- ── 급식 탭 ── -->
+  <div id="tab-meal" class="sec active">
+    <div class="month-nav">
+      <button class="month-btn" onclick="changeMonth(-1)">◀</button>
+      <span class="month-label" id="monthLabel"></span>
+      <button class="month-btn" onclick="changeMonth(1)">▶</button>
+    </div>
+    <div class="week-strip" id="weekStrip"></div>
+    <div class="date-nav">
+      <button class="nav-btn" onclick="changeDay(-1)">◀ 전날</button>
+      <div class="cur-date"><span id="navDate"></span><span class="wd" id="navWd"></span></div>
+      <button class="nav-btn" onclick="changeDay(1)">다음날 ▶</button>
+    </div>
+    <div id="allergyAlert"></div>
+    <div id="mealContent"><div class="loading"><div class="spin"></div>급식 정보 불러오는 중...</div></div>
+    <p class="fnote">
+      빨간 번호 = 내 알레르기 / 초록 번호 = 해당 없음<br>
+      1.난류 2.우유 3.메밀 4.땅콩 5.대두 6.밀 7.고등어 8.게 9.새우 10.돼지고기<br>
+      11.복숭아 12.토마토 13.아황산류 14.호두 15.닭고기 16.쇠고기 17.오징어 18.조개류<br>
+      출처: NEIS 교육정보 개방 포털
+    </p>
+  </div>
+
+  <!-- ── 탄소발자국 탭 ── -->
+  <div id="tab-carbon" class="sec">
+    <div id="carbonContent"><div class="loading"><div class="spin"></div>탄소 데이터 불러오는 중...</div></div>
+  </div>
+
+  <!-- ── 알레르기 탭 ── -->
+  <div id="tab-allergy" class="sec">
+    <div class="alert info"><span class="alert-ic">ℹ️</span><span>해당 알레르기를 선택하세요. 급식에 포함되면 <strong>빨간색 강조</strong>와 경고 배너가 나타나요.</span></div>
+    <p class="sec-lbl">🚨 알레르기 항목 선택 (중복 가능)</p>
+    <div class="ag" id="allergyGrid"></div>
+    <div class="notif-row">
+      <div><div class="nt">📳 매일 아침 급식 알림</div><div class="nd">오전 7시에 오늘의 급식 메뉴 알림</div></div>
+      <div class="tog" id="togNotif" onclick="toggleNotif()"></div>
+    </div>
+    <div class="notif-row">
+      <div><div class="nt">⚠️ 알레르기 경고 알림</div><div class="nd">내 알레르기가 포함된 날만 별도 알림</div></div>
+      <div class="tog on" id="togAllergy" onclick="toggleAllergyN()"></div>
+    </div>
+    <button class="save-btn" onclick="saveSettings()">✓ 설정 저장하기</button>
+    <p class="fnote" style="margin-top:10px">설정은 이 기기의 브라우저에 저장됩니다</p>
+  </div>
+
+  <!-- ── 영양소 탭 ── -->
+  <div id="tab-nutrient" class="sec">
+    <div id="nutrientContent"><div class="loading"><div class="spin"></div>영양소 정보 불러오는 중...</div></div>
+  </div>
+
+  <!-- ── 기후급식 탭 ── -->
+  <div id="tab-eco" class="sec">
+    <div class="eco">
+      <span class="ebadge g">🌿 이번 주 기후급식</span>
+      <div class="etitle">채식의 날 — 지구를 위한 한 끼</div>
+      <div class="edesc">매주 목요일은 채식 중심 메뉴로 구성됩니다. 육류 1kg 생산에 물 약 <span class="ehl">15,000L</span>가 필요해요. 오늘 한 끼로 탄소 배출 <span class="ehl">약 1.2kg</span>을 줄일 수 있어요!</div>
+      <div class="estat-row">
+        <div class="estat"><div class="en">1.2kg</div><div class="el">절감 탄소량</div></div>
+        <div class="estat"><div class="en">15,000L</div><div class="el">육류 1kg당 물</div></div>
+        <div class="estat"><div class="en">52회</div><div class="el">연간 채식의 날</div></div>
+      </div>
+    </div>
+    <div class="eco">
+      <span class="ebadge o">♻️ 잔반 줄이기</span>
+      <div class="etitle">잔반이 환경에 미치는 영향</div>
+      <div class="edesc">잔반 1인분(약 200g) 분해 시 CO₂ 환산 약 <span class="ehl">0.36kg</span> 발생해요. 내가 먹을 만큼만 받아가는 것이 가장 쉬운 환경 실천입니다 💪</div>
+    </div>
+    <div class="eco">
+      <span class="ebadge t">🥦 오늘의 식재료</span>
+      <div class="etitle">국내산 친환경 식재료 사용</div>
+      <div class="edesc">문영여고 급식은 국내산 친환경 인증 식재료를 우선 사용해요. 가까운 곳에서 재배된 식재료는 운송 탄소 배출도 줄여줍니다 🌍</div>
+    </div>
+    <div class="eco">
+      <span class="ebadge g">📚 기후급식이란?</span>
+      <div class="etitle">기후위기 대응, 급식에서 시작해요</div>
+      <div class="edesc">기후급식은 환경을 고려한 식단, 로컬푸드, 잔반 감축 등으로 학교 급식이 기후위기 대응에 기여하는 운동이에요. 우리 각자의 선택이 세상을 바꿔요!</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── 상수 ──
+const API_KEY = '63bc6e68635a448e83bbcbc162712da4';
+const LOAD_YEAR = 2026; // 이 연도의 모든 달 데이터를 불러옴
+const SCHOOL  = '7010697';
+const EDU     = 'B10';
+const WD      = ['일','월','화','수','목','금','토'];
+const ANAMES  = {1:'난류(계란)',2:'우유',3:'메밀',4:'땅콩',5:'대두',6:'밀',7:'고등어',8:'게',9:'새우',10:'돼지고기',11:'복숭아',12:'토마토',13:'아황산류',14:'호두',15:'닭고기',16:'쇠고기',17:'오징어',18:'조개류'};
+const NCOLORS = {'에너지':'#1a7a4a','탄수화물':'#2980b9','단백질':'#e74c3c','지방':'#f39c12','칼슘':'#9b59b6','나트륨':'#7f8c8d'};
+const NREF    = {'에너지':900,'탄수화물':130,'단백질':45,'지방':30,'칼슘':800,'나트륨':1500};
+
+// 식품별 탄소발자국 (kg CO₂eq / 1인분 기준, 문헌 평균값)
+const CO2_DB = {
+  // 육류·수산
+  '소':2.4,'쇠':2.4,'불고기':2.4,'갈비':2.4,'스테이크':2.4,'육':2.0,
+  '돼지':0.9,'삼겹':0.9,'제육':0.9,'햄':0.7,'베이컨':0.7,
+  '닭':0.6,'치킨':0.6,'오리':0.8,
+  '생선':0.5,'고등어':0.5,'연어':0.7,'참치':0.6,'조기':0.5,'명태':0.4,'새우':0.8,'게':0.6,'오징어':0.5,'조개':0.4,'홍합':0.2,
+  // 유제품·계란
+  '계란':0.4,'달걀':0.4,'난':0.4,'우유':0.35,'요구르트':0.35,'요플레':0.35,'치즈':0.9,
+  // 두류·채소·곡류
+  '두부':0.15,'콩':0.15,'된장':0.2,'청국장':0.2,
+  '밥':0.15,'쌀':0.15,'현미':0.15,'잡곡':0.12,'보리':0.12,
+  '빵':0.25,'라면':0.3,'국수':0.2,'파스타':0.2,'떡':0.18,
+  '김치':0.12,'배추':0.08,'무':0.07,'시금치':0.07,'당근':0.07,'양파':0.07,'감자':0.09,'고구마':0.09,
+  '토마토':0.09,'오이':0.07,'호박':0.08,'버섯':0.1,'브로콜리':0.07,
+  '미역':0.05,'다시마':0.05,'김':0.06,
+  // 국·탕
+  '국':0.1,'탕':0.15,'찌개':0.2,'soup':0.1,
+  'default':0.15
+};
+
+// ── 상태 ──
+let selDate    = new Date();
+let viewYear   = selDate.getFullYear();
+let viewMonth  = selDate.getMonth();
+let myA        = new Set();
+let monthCache = {};   // "YYYYMM" → rows[](성공) | null(오류) | Promise(로딩중)
+let notifOn    = false;
+let allergyNOn = true;
+let totalMealDays = 0;      // 누적 계산 날수
+let totalCO2Saved = 0;      // 채식 대비 누적 절감량 (대략)
+
+// ── 초기화 ──
+function init(){
+  loadSettings();
+  setHeaderDate();
+  renderAllergyGrid();
+  updateDateDisplay();
+  renderWeekStrip();
+  // 2026년 전체를 한 번에 요청
+  loadYear(LOAD_YEAR).then(() => {
+    renderWeekStrip();
+    renderDay();
+  });
+}
+
+function loadSettings(){
+  try{
+    const s=localStorage.getItem('myn_al'); if(s) myA=new Set(JSON.parse(s));
+    notifOn=localStorage.getItem('myn_notif')==='true';
+    allergyNOn=localStorage.getItem('myn_an')!=='false';
+    document.getElementById('togNotif').classList.toggle('on',notifOn);
+    document.getElementById('togAllergy').classList.toggle('on',allergyNOn);
+  }catch(e){}
+}
+function saveSettings(){
+  try{
+    localStorage.setItem('myn_al',JSON.stringify([...myA]));
+    localStorage.setItem('myn_notif',notifOn);
+    localStorage.setItem('myn_an',allergyNOn);
+  }catch(e){}
+  // 알레르기 변경돼도 캐시된 급식 데이터는 그대로 유지, 표시만 새로 함
+  renderDay();
+  alert('✅ 설정이 저장되었습니다!');
+}
+
+// ── 날짜 유틸 ──
+function fmt(d){return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;}
+function fmtM(y,m){return `${y}${String(m+1).padStart(2,'0')}`;}
+function fmtKo(d){return `${d.getMonth()+1}월 ${d.getDate()}일`;}
+function sameDay(a,b){return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();}
+
+function setHeaderDate(){
+  const n=new Date();
+  document.getElementById('hDay').textContent=WD[n.getDay()]+'요일';
+  document.getElementById('hDate').textContent=`${n.getFullYear()}년 ${n.getMonth()+1}월 ${n.getDate()}일`;
+}
+function updateDateDisplay(){
+  document.getElementById('navDate').textContent=fmtKo(selDate);
+  document.getElementById('navWd').textContent=`(${WD[selDate.getDay()]})`;
+  document.getElementById('monthLabel').textContent=`${viewYear}년 ${viewMonth+1}월`;
+}
+
+// ── NEIS API: 연도 전체를 한 번에 로드 ──
+let yearCache = {}; // "YYYY" → Promise | true(완료)
+
+function loadYear(y){
+  const ykey = String(y);
+  if(yearCache[ykey] instanceof Promise) return yearCache[ykey];
+  if(yearCache[ykey] === true) return Promise.resolve();
+
+  const from = `${y}0101`;
+  const to   = `${y}1231`;
+  const url  = `https://open.neis.go.kr/hub/mealServiceDietInfo?KEY=${API_KEY}&Type=json&pIndex=1&pSize=1000&ATPT_OFCDC_SC_CODE=${EDU}&SD_SCHUL_CODE=${SCHOOL}&MLSV_FROM=${from}&MLSV_TO=${to}`;
+
+  const promise = fetch(url)
+    .then(r => r.json())
+    .then(json => {
+      if(json.mealServiceDietInfo){
+        const rows = json.mealServiceDietInfo[1].row;
+        // 월별로 분류해서 monthCache에 저장
+        rows.forEach(row => {
+          const mkey = row.MLSV_YMD.slice(0,6); // "202605"
+          if(!Array.isArray(monthCache[mkey])) monthCache[mkey] = [];
+          monthCache[mkey].push(row);
+        });
+        // 데이터 없는 달은 빈 배열로 세팅
+        for(let m=0;m<12;m++){
+          const mkey=`${y}${String(m+1).padStart(2,'0')}`;
+          if(!Array.isArray(monthCache[mkey])) monthCache[mkey]=[];
+        }
+      }
+      yearCache[ykey] = true;
+    })
+    .catch(() => {
+      yearCache[ykey] = true; // 오류여도 재시도 막기
+    });
+
+  yearCache[ykey] = promise;
+  return promise;
+}
+function loadMonth(y, m){
+  const key = fmtM(y, m);
+  // 이미 로드 완료(배열 또는 null)이면 즉시 resolve
+  if(Array.isArray(monthCache[key]) || monthCache[key] === null) return Promise.resolve();
+  // 이미 로딩 중인 Promise이면 그걸 반환 (중복 호출 방지)
+  if(monthCache[key] instanceof Promise) return monthCache[key];
+
+  const lastDay = new Date(y, m+1, 0).getDate();
+  const from = `${y}${String(m+1).padStart(2,'0')}01`;
+  const to   = `${y}${String(m+1).padStart(2,'0')}${lastDay}`;
+  const url  = `https://open.neis.go.kr/hub/mealServiceDietInfo?KEY=${API_KEY}&Type=json&pIndex=1&pSize=1000&ATPT_OFCDC_SC_CODE=${EDU}&SD_SCHUL_CODE=${SCHOOL}&MLSV_FROM=${from}&MLSV_TO=${to}`;
+
+  const promise = fetch(url)
+    .then(r => r.json())
+    .then(json => {
+      if(json.mealServiceDietInfo){
+        monthCache[key] = json.mealServiceDietInfo[1].row;
+      } else {
+        monthCache[key] = []; // 해당 월 급식 없음
+      }
+    })
+    .catch(() => {
+      monthCache[key] = null; // 네트워크 오류
+    });
+
+  monthCache[key] = promise; // Promise 저장 (로딩 중)
+  return promise;
+}
+
+function getRows(d){
+  const key = fmtM(d.getFullYear(), d.getMonth());
+  const cached = monthCache[key];
+  if(cached === null) return null;              // 오류
+  if(!Array.isArray(cached)) return undefined; // 아직 로딩 중 or 미시작
+  return cached.filter(r => r.MLSV_YMD === fmt(d));
+}
+
+// ── 주간 스트립 ──
+function renderWeekStrip(){
+  const strip=document.getElementById('weekStrip');
+  strip.innerHTML='';
+  const today=new Date();
+  const start=new Date(selDate);
+  start.setDate(start.getDate()-3);
+
+  for(let i=0;i<7;i++){
+    const d=new Date(start.getFullYear(),start.getMonth(),start.getDate()+i);
+    const key=fmtM(d.getFullYear(),d.getMonth());
+    const cached=monthCache[key];
+    const hasMeal=Array.isArray(cached)&&cached.some(r=>r.MLSV_YMD===fmt(d));
+    const el=document.createElement('div');
+    el.className='wday'+(sameDay(d,selDate)?' active':'')+(sameDay(d,today)?' today':'')+(hasMeal?' has-meal':'');
+    el.innerHTML=`<div class="dn">${WD[d.getDay()]}</div><div class="dd">${d.getDate()}</div>`;
+    const dd=new Date(d);
+    el.onclick=()=>{ selDate=dd; updateDateDisplay(); renderWeekStrip(); renderDay(); };
+    strip.appendChild(el);
+  }
+}
+
+// ── 급식 렌더링 ──
+function renderDay(){
+  const rows=getRows(selDate);
+  const mc=document.getElementById('mealContent');
+  const ac=document.getElementById('allergyAlert');
+  ac.innerHTML='';
+
+  if(rows===undefined){
+    mc.innerHTML='<div class="loading"><div class="spin"></div>급식 정보 불러오는 중...</div>';
+    return;
+  }
+  if(rows===null){
+    mc.innerHTML='<div class="alert err"><span class="alert-ic">❌</span><span>급식 정보를 불러오지 못했어요. 잠시 후 다시 시도해보세요.</span></div>';
+    return;
+  }
+  if(rows.length===0){
+    mc.innerHTML='<div class="loading" style="font-size:15px">📭 이 날은 급식이 없어요<br><span style="font-size:12px;display:block;margin-top:6px;color:#aaa">주말·방학이거나 아직 등록되지 않은 날짜예요</span></div>';
+    document.getElementById('nutrientContent').innerHTML='<div class="loading">📭 급식이 없어 영양소 정보도 없어요</div>';
+    document.getElementById('carbonContent').innerHTML='<div class="no-meal-carbon"><div class="emoji">🌿</div>이 날은 급식 정보가 없어요</div>';
+    return;
+  }
+
+  const typeMap={'1':'🌅 조식','2':'🌞 중식','3':'🌙 석식'};
+  let warns=[],html='',nutriRow=null;
+
+  rows.forEach(row=>{
+    const type=typeMap[row.MMEAL_SC_CODE]||'급식';
+    const kcal=row.CAL_INFO||'';
+    const items=parseMenu(row.DDISH_NM);
+    html+=`<div class="card"><div class="card-head"><span class="card-title">${type}</span><span class="card-sub">${kcal}</span></div>`;
+    items.forEach(item=>{
+      const hits=item.nums.filter(n=>myA.has(n));
+      const bad=hits.length>0;
+      if(bad) warns.push({food:item.name,nums:hits});
+      const tags=item.nums.map(n=>`<span class="tag ${myA.has(n)?'d':'s'}">${n}</span>`).join('');
+      html+=`<div class="menu-item${bad?' danger':''}"><span class="menu-name${bad?' danger':''}">${bad?'⚠️ ':''}${item.name}</span><div class="tags">${tags}</div></div>`;
+    });
+    html+=`</div>`;
+    if(row.MMEAL_SC_CODE==='2'||!nutriRow) nutriRow=row;
+  });
+
+  mc.innerHTML=html;
+  if(nutriRow){ renderNutrient(nutriRow); renderCarbon(nutriRow); }
+
+  if(warns.length>0&&allergyNOn){
+    const d=warns.map(w=>`<strong>${w.food}</strong>(${w.nums.map(n=>ANAMES[n]).join(', ')})`).join(', ');
+    ac.innerHTML=`<div class="alert warn"><span class="alert-ic">⚠️</span><span>오늘 급식에 내 알레르기가 포함돼 있어요!<br>${d}</span></div>`;
+  } else if(myA.size>0){
+    ac.innerHTML=`<div class="alert ok"><span class="alert-ic">✅</span><span>오늘 급식에는 설정한 알레르기 항목이 없어요. 안심하고 드세요!</span></div>`;
+  }
+}
+
+// ── 탄소발자국 계산 ──
+function estimateCO2(menuName){
+  const lower=menuName.toLowerCase();
+  for(const [key,val] of Object.entries(CO2_DB)){
+    if(key==='default') continue;
+    if(lower.includes(key)) return val;
+  }
+  return CO2_DB['default'];
+}
+
+function renderCarbon(row){
+  const items=parseMenu(row.DDISH_NM);
+  const co2list=items.map(item=>({name:item.name,co2:estimateCO2(item.name)}));
+  const total=co2list.reduce((s,x)=>s+x.co2,0);
+  const max=Math.max(...co2list.map(x=>x.co2));
+
+  // 비교값
+  const avgMeatMeal=2.5;     // 고기 중심 식사 평균
+  const saved=Math.max(0,(avgMeatMeal-total));
+  const trees=saved/21.77;   // 나무 1그루 연간 흡수량 21.77kg CO2
+  const carKm=(total*1000)/130; // 승용차 130g CO2/km
+
+  // 등급
+  let grade='🌿 매우 낮음', gradeColor='#1a7a4a';
+  if(total>=2.0){grade='🔴 높음';gradeColor='#c0392b';}
+  else if(total>=1.2){grade='🟠 보통';gradeColor='#e67e22';}
+  else if(total>=0.6){grade='🟡 낮음';gradeColor='#c8a200';}
+
+  let barHtml=co2list.map(item=>{
+    const pct=max>0?Math.round((item.co2/max)*100):0;
+    const colorVal=item.co2>=1.5?'#c0392b':item.co2>=0.8?'#e67e22':item.co2>=0.4?'#c8a200':'#1a7a4a';
+    return `<div class="co2-item">
+      <span class="co2-name">${item.name.length>8?item.name.slice(0,8)+'…':item.name}</span>
+      <div class="co2-bar-outer"><div class="co2-bar-inner" style="width:${pct}%;background:${colorVal}"></div></div>
+      <span class="co2-val">${item.co2.toFixed(2)} kg</span>
+    </div>`;
+  }).join('');
+
+  document.getElementById('carbonContent').innerHTML=`
+    <div class="carbon-hero">
+      <div style="font-size:13px;opacity:.8;">오늘 ${['','조식','중식','석식'][row.MMEAL_SC_CODE]||'급식'} 탄소발자국</div>
+      <div class="big">${total.toFixed(2)}</div>
+      <div class="unit">kg CO₂eq</div>
+      <div style="margin:6px 0;font-size:12px;opacity:.75;color:${gradeColor==='#1a7a4a'?'#9de8c4':gradeColor}">${grade}</div>
+      <div class="compare">🚗 승용차 ${carKm.toFixed(1)}km 주행과 같은 양</div>
+    </div>
+
+    <div class="co2-bar-wrap">
+      <div class="co2-bar-head">🌡️ 메뉴별 탄소 배출량</div>
+      ${barHtml}
+    </div>
+
+    <div class="accum-card">
+      <h3>🌍 오늘 한 끼의 환경 가치</h3>
+      <div class="accum-grid">
+        <div class="accum-item">
+          <div class="an">${total.toFixed(1)}<span style="font-size:12px">kg</span></div>
+          <div class="al">오늘 탄소 배출량</div>
+        </div>
+        <div class="accum-item">
+          <div class="an">${saved.toFixed(1)}<span style="font-size:12px">kg</span></div>
+          <div class="al">고기식사 대비 절감</div>
+        </div>
+        <div class="accum-item">
+          <div class="an">${trees.toFixed(2)}<span style="font-size:12px">그루</span></div>
+          <div class="al">나무가 하루 흡수량</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tip-card">
+      <span class="tip-badge">💡 탄소 줄이는 팁</span>
+      <div class="tip-title">오늘 급식에서 탄소를 가장 많이 만드는 메뉴는?</div>
+      <div class="tip-desc">
+        ${co2list.sort((a,b)=>b.co2-a.co2)[0].name}이(가) 가장 높은 탄소 배출 메뉴예요.
+        <strong>채소·두류·곡류</strong> 위주의 식단은 육류 대비 탄소 배출량이 최대 <strong style="color:#1a7a4a">10배 이상</strong> 낮아요.
+        오늘 채소 반찬을 먼저 먹어보는 건 어떨까요? 🥦
+      </div>
+    </div>
+
+    <div class="tip-card">
+      <span class="tip-badge">📊 탄소발자국이란?</span>
+      <div class="tip-title">음식이 식탁에 오기까지의 탄소량</div>
+      <div class="tip-desc">
+        탄소발자국(Carbon Footprint)은 식재료 재배·사육·가공·운반·조리까지 전 과정에서 발생하는 온실가스 총량이에요.
+        단위는 CO₂eq(이산화탄소 환산량)으로 표시해요. 같은 칼로리라도 소고기는 두부보다 약 <span style="color:#1a7a4a;font-weight:700">16배</span> 많은 탄소를 배출해요.
+      </div>
+    </div>
+    <p class="fnote">탄소 수치는 학술 문헌 평균값 기반 추정치로, 실제 값과 다를 수 있어요.<br>참고: Our World in Data, FAO 기후변화와 식품 보고서</p>
+  `;
+}
+
+// ── 영양소 ──
+function renderNutrient(row){
+  const nc=document.getElementById('nutrientContent');
+  if(!row||!row.NTR_INFO){nc.innerHTML='<div class="loading">📭 영양소 정보가 없어요</div>';return;}
+  const tm={'1':'조식','2':'중식','3':'석식'};
+  const type=tm[row.MMEAL_SC_CODE]||'급식';
+  const items=row.NTR_INFO.split('<br/>').map(s=>{
+    const m=s.trim().match(/^(.+?)\(.*?\)\s*:\s*([\d.]+)/);
+    return m?{name:m[1].trim(),val:parseFloat(m[2])}:null;
+  }).filter(Boolean);
+
+  let html=`<div class="card"><div class="card-head"><span class="card-title">📊 ${type} 영양 분석 (${fmtKo(selDate)})</span></div><div class="nb">`;
+  items.forEach(item=>{
+    const ref=NREF[item.name]||item.val;
+    const pct=Math.min(100,Math.round((item.val/ref)*100));
+    const color=NCOLORS[item.name]||'#888';
+    const unit=item.name==='에너지'?'kcal':(item.name==='나트륨'||item.name==='칼슘')?'mg':'g';
+    html+=`<div class="nrow"><div class="nlbl"><span class="nname">${item.name}</span><span class="nval">${item.val}${unit} / 권장 ${ref}${unit} (${pct}%)</span></div><div class="bar-t"><div class="bar-f" style="width:${pct}%;background:${color}"></div></div></div>`;
+  });
+  html+=`</div></div><p class="fnote">청소년 1일 권장량 기준 (점심 약 1/3 적용)</p>`;
+  nc.innerHTML=html;
+}
+
+// ── 파싱 ──
+function parseMenu(s){
+  return s.split('<br/>').map(p=>p.trim()).filter(Boolean).map(p=>{
+    const m=p.match(/^(.*?)(\([\d\s.]+\))?$/);
+    const name=m?m[1].trim():p;
+    const as=m&&m[2]?m[2]:'';
+    const nums=[...as.matchAll(/(\d+)/g)].map(x=>parseInt(x[1])).filter(n=>n>=1&&n<=18);
+    return{name,nums};
+  });
+}
+
+// ── 날짜 이동 ──
+function changeDay(delta){
+  const nd=new Date(selDate);
+  nd.setDate(nd.getDate()+delta);
+  selDate=nd;
+  viewYear=selDate.getFullYear();
+  viewMonth=selDate.getMonth();
+  updateDateDisplay();
+  loadYear(viewYear).then(()=>{ renderWeekStrip(); renderDay(); });
+}
+
+function changeMonth(delta){
+  viewMonth+=delta;
+  if(viewMonth>11){viewMonth=0;viewYear++;}
+  if(viewMonth<0){viewMonth=11;viewYear--;}
+  const lastDay=new Date(viewYear,viewMonth+1,0).getDate();
+  selDate=new Date(viewYear,viewMonth,Math.min(selDate.getDate(),lastDay));
+  updateDateDisplay();
+  loadYear(viewYear).then(()=>{ renderWeekStrip(); renderDay(); });
+}
+
+// ── 알레르기 그리드 ──
+function renderAllergyGrid(){
+  const g=document.getElementById('allergyGrid');
+  g.innerHTML='';
+  Object.entries(ANAMES).forEach(([id,name])=>{
+    const n=parseInt(id);
+    const b=document.createElement('button');
+    b.className='abtn'+(myA.has(n)?' on':'');
+    b.innerHTML=`<span class="dot">${myA.has(n)?'✓':''}</span><span>${n}. ${name}</span>`;
+    b.onclick=()=>{myA.has(n)?myA.delete(n):myA.add(n);renderAllergyGrid();};
+    g.appendChild(b);
+  });
+}
+
+// ── 탭 전환 ──
+function sw(name){
+  ['meal','carbon','allergy','nutrient','eco'].forEach((t,i)=>{
+    document.querySelectorAll('.tab')[i].classList.toggle('active',t===name);
+    document.getElementById('tab-'+t).classList.toggle('active',t===name);
+  });
+}
+
+// ── 토글 ──
+function toggleNotif(){
+  notifOn=!notifOn;
+  document.getElementById('togNotif').classList.toggle('on',notifOn);
+  if(notifOn&&'Notification'in window){
+    Notification.requestPermission().then(p=>{
+      if(p!=='granted'){notifOn=false;document.getElementById('togNotif').classList.remove('on');alert('브라우저에서 알림 권한을 허용해주세요.');}
+    });
+  }
+}
+function toggleAllergyN(){
+  allergyNOn=!allergyNOn;
+  document.getElementById('togAllergy').classList.toggle('on',allergyNOn);
+}
+
+init();
+</script>
+</body>
+</html>
